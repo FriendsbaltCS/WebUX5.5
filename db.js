@@ -1,4 +1,5 @@
 const sqlite3 = require('sqlite3').verbose();
+const bcrypt = require('bcrypt');
 
 async function initializeDatabase() {
     const db = new sqlite3.Database('database.db', (err) => {
@@ -24,4 +25,43 @@ async function initializeDatabase() {
     });
 }
 
-module.exports = { initializeDatabase }; // Export the function
+async function authenticateUser(user) {
+    const { username, password } = user;
+    const db = new sqlite3.Database('database.db');
+    db.get('SELECT * FROM users WHERE username = ?', [username], async (err, row) => {
+        if (err) {
+            console.error(err.message);
+        } else {
+            if (row) {
+                const validPassword = await bcrypt.compare(password, row.password);
+                if (validPassword) {
+                    console.log('User authenticated.');
+                    return row;
+                } else {
+                    console.log('Invalid password.');
+                    return null;
+                }
+            } else {
+                console.log('User not found.');
+                return null;
+            }
+        }
+    });
+    db.close();
+}
+
+async function registerUser(user) {
+    const { firstName, lastName, email, username, password } = user;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const db = new sqlite3.Database('database.db');
+    db.run('INSERT INTO users (first_name, last_name, email, username, password) VALUES (?, ?, ?, ?, ?)', [firstName, lastName, email, username, hashedPassword], (err) => {
+        if (err) {
+            console.error(err.message);
+        } else {
+            console.log('User registered.');
+        }
+    });
+    db.close();
+}
+
+module.exports = { initializeDatabase, registerUser, authenticateUser }; // Export the function
