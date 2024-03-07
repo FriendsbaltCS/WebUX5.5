@@ -28,26 +28,30 @@ async function initializeDatabase() {
 async function authenticateUser(user) {
     const { username, password } = user;
     const db = new sqlite3.Database('database.db');
-    db.get('SELECT * FROM users WHERE username = ?', [username], async (err, row) => {
-        if (err) {
-            console.error(err.message);
-        } else {
-            if (row) {
-                const validPassword = await bcrypt.compare(password, row.password);
-                if (validPassword) {
-                    console.log('User authenticated.');
-                    return row;
-                } else {
-                    console.log('Invalid password.');
-                    return null;
-                }
+
+    return new Promise((resolve, reject) => {
+        db.get('SELECT * FROM users WHERE username = ?', [username], async (err, row) => {
+            if (err) {
+                console.error(err.message);
+                reject(err);
             } else {
-                console.log('User not found.');
-                return null;
+                if (row) {
+                    const validPassword = await bcrypt.compare(password, row.password);
+                    if (validPassword) {
+                        console.log('User authenticated.');
+                        resolve(row);
+                    } else {
+                        console.log('Invalid password.');
+                        resolve(null);
+                    }
+                } else {
+                    console.log('User not found.');
+                    resolve(null);
+                }
             }
-        }
+        });
+        db.close();
     });
-    db.close();
 }
 
 async function registerUser(user) {

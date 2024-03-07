@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('./db');
 const bodyParser = require('body-parser');
 const session = require('express-session');
+require('dotenv').config();
 
 const app = express();
 const port = 3000;
@@ -30,7 +31,7 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  db.authenticateUser(username, password)
+  db.authenticateUser({username, password})
     .then((user) => {
       if (user) {
         req.session.user = user;
@@ -67,8 +68,21 @@ app.post('/register', (req, res) => {
     });
 });
 
+app.get('/dashboard', isLoggedIn, (req, res) => {
+  res.render('dashboard', { user: req.session.user });
+});
+
+
 db.initializeDatabase();
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
+
+function isLoggedIn(req, res, next) {
+  if (req.session.user) {
+    next();
+  } else {
+    res.redirect('/login');
+  }
+}
